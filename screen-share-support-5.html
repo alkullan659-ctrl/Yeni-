@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SupportView – Remote Help</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --border: #252a38;
+    --accent: #4f8ef7;
+    --accent2: #7c5af7;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e8eaf0;
+    --muted: #7b82a0;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+  }
+
+  nav {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: rgba(79,142,247,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(79,142,247,0.25);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+
+  /* SERVER CONFIG BAR */
+  .server-bar {
+    width: 100%;
+    background: rgba(124,90,247,0.08);
+    border-bottom: 1px solid rgba(124,90,247,0.2);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .server-bar label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .server-bar input {
+    flex: 1;
+    min-width: 180px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+  }
+  .server-bar input:focus { border-color: var(--accent2); }
+  .conn-status {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .conn-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .conn-dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .conn-dot.connecting { background: var(--yellow); animation: pulse 1s infinite; }
+  .conn-dot.error { background: var(--red); }
+
+  main {
+    width: 100%;
+    max-width: 480px;
+    padding: 28px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .role-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .role-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .role-btn .icon { font-size: 28px; }
+  .role-btn .label { font-weight: 600; font-size: 14px; }
+  .role-btn .sub { font-size: 11px; color: var(--muted); }
+  .role-btn:hover, .role-btn.active {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.07);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .card-title {
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+
+  .btn {
+    border: none;
+    border-radius: 12px;
+    padding: 13px 20px;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    width: 100%;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-danger { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+  .btn-danger:hover { background: rgba(239,68,68,0.2); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-back { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+
+  .session-code {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .code-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--accent);
+  }
+  .copy-btn {
+    background: rgba(79,142,247,0.1);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: background 0.15s;
+  }
+  .copy-btn:hover { background: rgba(79,142,247,0.2); }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1.2s infinite; }
+  .status-dot.red { background: var(--red); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .video-wrap {
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 9/16;
+    max-height: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .video-placeholder {
+    position: absolute;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 20px;
+  }
+  .video-placeholder .big { font-size: 36px; margin-bottom: 10px; }
+
+  .notice {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: #c8a03a;
+    line-height: 1.6;
+  }
+  .notice strong { color: var(--yellow); }
+
+  .log-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    max-height: 90px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .log-line { line-height: 1.5; }
+  .log-line.ok { color: var(--green); }
+  .log-line.err { color: var(--red); }
+  .log-line.info { color: var(--accent); }
+
+  .hidden { display: none !important; }
+  .section { display: flex; flex-direction: column; gap: 20px; }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .steps li { display: flex; gap: 8px; }
+  .steps li span.n {
+    background: rgba(79,142,247,0.15);
+    color: var(--accent);
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Support<span>View</span></div>
+  <div class="badge">WebSocket</div>
+</nav>
+
+<!-- SERVER CONFIG BAR -->
+<div class="server-bar">
+  <label>SERVER URL</label>
+  <input type="text" id="serverUrlInput" value="wss://yeni-fat3.onrender.com" placeholder="wss://your-server.railway.app" />
+  <div class="conn-status">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connLabel">Not connected</span>
+  </div>
+</div>
+
+<main>
+
+  <!-- ROLE SELECTOR -->
+  <div id="roleSection" class="section">
+    <div style="text-align:center; padding: 8px 0 4px;">
+      <div style="font-size:22px;font-weight:700;letter-spacing:-0.5px;">Who are you?</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:6px;">Choose your role to get started</div>
+    </div>
+    <div class="role-selector">
+      <button class="role-btn" onclick="selectRole('customer')">
+        <span class="icon">📱</span>
+        <span class="label">Customer</span>
+        <span class="sub">Share my screen</span>
+      </button>
+      <button class="role-btn" onclick="selectRole('agent')">
+        <span class="icon">🎧</span>
+        <span class="label">Support Agent</span>
+        <span class="sub">View customer screen</span>
+      </button>
+    </div>
+    <div class="notice">
+      <strong>⚠️ Consent required:</strong> Always get customer permission before starting a session. The customer must tap "Start Sharing" themselves — it never starts automatically.
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Server Setup</div>
+      <ul class="steps">
+        <li><span class="n">1</span><span>Install Node.js and run: <code style="color:var(--accent)">npm install ws && node server.js</code></span></li>
+        <li><span class="n">2</span><span>Change the Server URL above to your server's address (or keep localhost for same-machine testing)</span></li>
+        <li><span class="n">3</span><span>For internet access, deploy server.js to Railway, Render, or Fly.io and use wss://</span></li>
+        <li><span class="n">4</span><span>Both customer and agent open this HTML file and point to the same server</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CUSTOMER VIEW -->
+  <div id="customerSection" class="section hidden">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Your Session Code</div>
+      <div style="font-size:13px;color:var(--muted);">Share this with your support agent.</div>
+      <div class="session-code">
+        <span class="code-val" id="customerCode">——</span>
+        <button class="copy-btn" onclick="copyCode()">Copy</button>
+      </div>
+      <div class="status-row">
+        <div class="status-dot yellow" id="customerDot"></div>
+        <span id="customerStatus">Connecting to server…</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Screen Share</div>
+      <button class="btn btn-primary" id="startShareBtn" onclick="startScreenShare()" disabled>🖥️ Start Sharing My Screen</button>
+      <button class="btn btn-danger hidden" id="stopShareBtn" onclick="stopScreenShare()">⛔ Stop Sharing</button>
+      <div class="log-wrap" id="customerLog"></div>
+    </div>
+
+    <button class="btn btn-back" onclick="resetApp()">← Back</button>
+  </div>
+
+  <!-- AGENT VIEW -->
+  <div id="agentSection" class="section hidden">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Connect to Customer</div>
+      <div class="field">
+        <label>CUSTOMER SESSION CODE</label>
+        <input type="text" id="agentCodeInput" maxlength="6" placeholder="e.g. 4F9A2C" oninput="this.value=this.value.toUpperCase()" />
+      </div>
+      <button class="btn btn-primary" onclick="agentConnect()">🔗 Connect to Customer</button>
+    </div>
+
+    <div id="agentViewCard" class="card hidden">
+      <div class="card-title"><span class="dot"></span> Customer Screen</div>
+      <div class="status-row" style="margin-bottom:4px;">
+        <div class="status-dot" id="agentDot"></div>
+        <span id="agentStatus">Not connected</span>
+      </div>
+      <div class="video-wrap">
+        <video id="remoteVideo" autoplay playsinline muted></video>
+        <div class="video-placeholder" id="videoPlaceholder">
+          <div class="big">📺</div>
+          Waiting for customer to share their screen…
+        </div>
+      </div>
+      <button class="btn btn-danger" onclick="agentDisconnect()">Disconnect</button>
+      <div class="log-wrap" id="agentLog"></div>
+    </div>
+
+    <button class="btn btn-back" onclick="resetApp()">← Back</button>
+  </div>
+
+</main>
+
+<script>
+// ─── WebSocket Signaling ─────────────────────────────────────────────────────
+let ws = null;
+let pc = null;
+let localStream = null;
+let sessionCode = '';
+let myRole = '';
+
+function getServerUrl() {
+  return document.getElementById('serverUrlInput').value.trim() || 'ws://localhost:3001';
+}
+
+function setConnStatus(state, label) {
+  const dot = document.getElementById('connDot');
+  const lbl = document.getElementById('connLabel');
+  dot.className = 'conn-dot ' + state;
+  lbl.textContent = label;
+}
+
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+let lastOnOpen = null;
+
+function connectWS(onOpen) {
+  if (location.protocol === 'file:' || location.protocol === 'content:') {
+    alert('Dosyayı doğrudan açıyorsunuz!\n\nEkran paylaşımı için HTTPS gerekli.\n\nHTML dosyasını Railway\'e yükleyin ve https:// üzerinden açın.');
+    return;
+  }
+
+  if (ws && ws.readyState === WebSocket.OPEN) { if (onOpen) onOpen(); return; }
+  if (onOpen) lastOnOpen = onOpen;
+
+  setConnStatus('connecting', 'Bağlanıyor…');
+  ws = new WebSocket(getServerUrl());
+
+  ws.onopen = () => {
+    setConnStatus('connected', 'Bağlı ✓');
+    reconnectAttempts = 0;
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    if (lastOnOpen) lastOnOpen();
+  };
+
+  ws.onerror = () => {
+    setConnStatus('error', 'Bağlantı hatası');
+    log(myRole || 'customer', 'Sunucuya ulaşılamıyor.', 'err');
+  };
+
+  ws.onclose = () => {
+    setConnStatus('', 'Bağlantı kesildi');
+    if (myRole) {
+      reconnectAttempts++;
+      const delay = Math.min(3000 * reconnectAttempts, 15000);
+      log(myRole, 'Bağlantı kesildi. ' + (delay/1000) + 'sn sonra yeniden bağlanılıyor… (' + reconnectAttempts + '. deneme)', 'err');
+      setConnStatus('connecting', delay/1000 + 'sn sonra yeniden bağlanıyor…');
+      reconnectTimer = setTimeout(() => connectWS(null), delay);
+    }
+  };
+
+  ws.onmessage = async (e) => {
+    const msg = JSON.parse(e.data);
+    await handleSignal(msg);
+  };
+
+  // Keep-alive ping her 25 saniyede bir
+  if (ws._pingInterval) clearInterval(ws._pingInterval);
+  const wsRef = ws;
+  wsRef._pingInterval = setInterval(() => {
+    if (wsRef && wsRef.readyState === WebSocket.OPEN) {
+      wsRef.send(JSON.stringify({ type: 'ping' }));
+    }
+  }, 25000);
+}
+
+function wsSend(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(obj));
+  }
+}
+
+// ─── Signal Handler ──────────────────────────────────────────────────────────
+async function handleSignal(msg) {
+  const { type, data } = msg;
+
+  if (type === 'joined') {
+    log(myRole, `Joined session ${msg.code} as ${msg.role}`, 'ok');
+    if (myRole === 'customer') {
+      setStatus('customer', 'Waiting for agent to connect…', 'yellow');
+      document.getElementById('startShareBtn').disabled = false;
+    }
+  }
+
+  if (type === 'peer_joined') {
+    if (myRole === 'customer') {
+      log('customer', 'Agent connected!', 'ok');
+      setStatus('customer', 'Agent connected — you can share your screen', 'green');
+    } else {
+      log('agent', 'Customer is online, creating offer…', 'info');
+      setStatus('agent', 'Customer connected, negotiating…', 'yellow');
+      await createOffer();
+    }
+  }
+
+  if (type === 'peer_left') {
+    const side = myRole;
+    log(side, `${data.role || 'Peer'} disconnected`, 'err');
+    if (myRole === 'agent') setStatus('agent', 'Customer disconnected', 'red');
+    if (myRole === 'customer') setStatus('customer', 'Agent disconnected', 'red');
+  }
+
+  if (type === 'offer' && myRole === 'customer') {
+    log('customer', 'Received offer from agent', 'info');
+    if (!pc) pc = createPC('customer');
+    await pc.setRemoteDescription(new RTCSessionDescription(data));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    wsSend({ type: 'answer', code: sessionCode, data: answer });
+    log('customer', 'Answer sent', 'info');
+  }
+
+  if (type === 'answer' && myRole === 'agent') {
+    log('agent', 'Received answer from customer', 'info');
+    if (pc && pc.signalingState === 'have-local-offer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(data));
+    }
+  }
+
+  if (type === 'ice') {
+    try {
+      if (pc) await pc.addIceCandidate(new RTCIceCandidate(data));
+    } catch(e) {}
+  }
+}
+
+// ─── WebRTC ──────────────────────────────────────────────────────────────────
+function createPC(side) {
+  const p = new RTCPeerConnection({
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  });
+
+  p.onicecandidate = e => {
+    if (e.candidate) {
+      wsSend({ type: 'ice', code: sessionCode, data: e.candidate });
+    }
+  };
+
+  p.onconnectionstatechange = () => {
+    log(side, 'Connection: ' + p.connectionState, p.connectionState === 'connected' ? 'ok' : 'info');
+  };
+
+  if (side === 'agent') {
+    p.ontrack = e => {
+      log('agent', 'Receiving screen stream ✓', 'ok');
+      setStatus('agent', 'Viewing customer screen', 'green');
+      const vid = document.getElementById('remoteVideo');
+      vid.srcObject = e.streams[0];
+      document.getElementById('videoPlaceholder').classList.add('hidden');
+    };
+  }
+
+  return p;
+}
+
+async function createOffer() {
+  if (!pc) pc = createPC('agent');
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  wsSend({ type: 'offer', code: sessionCode, data: offer });
+  log('agent', 'Offer sent to customer', 'info');
+}
+
+// ─── Role Selection ──────────────────────────────────────────────────────────
+function genCode() {
+  return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+function selectRole(role) {
+  myRole = role;
+  document.getElementById('roleSection').classList.add('hidden');
+
+  if (role === 'customer') {
+    sessionCode = genCode();
+    document.getElementById('customerCode').textContent = sessionCode;
+    document.getElementById('customerSection').classList.remove('hidden');
+    setStatus('customer', 'Connecting to server…', 'yellow');
+    connectWS(() => {
+      wsSend({ type: 'join', code: sessionCode, data: { role: 'customer' } });
+    });
+  } else {
+    document.getElementById('agentSection').classList.remove('hidden');
+  }
+}
+
+function agentConnect() {
+  const code = document.getElementById('agentCodeInput').value.trim().toUpperCase();
+  if (code.length < 4) { alert('Enter a valid session code.'); return; }
+  sessionCode = code;
+
+  document.getElementById('agentViewCard').classList.remove('hidden');
+  setStatus('agent', 'Connecting to server…', 'yellow');
+
+  connectWS(() => {
+    wsSend({ type: 'join', code: sessionCode, data: { role: 'agent' } });
+    log('agent', 'Joined session: ' + sessionCode, 'info');
+  });
+}
+
+// ─── Screen Share ────────────────────────────────────────────────────────────
+async function startScreenShare() {
+  try {
+    localStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 15 },
+      audio: false
+    });
+    localStream.getTracks().forEach(t => {
+      if (pc) pc.addTrack(t, localStream);
+    });
+    log('customer', 'Screen sharing started ✓', 'ok');
+    setStatus('customer', 'Sharing screen…', 'green');
+    document.getElementById('startShareBtn').classList.add('hidden');
+    document.getElementById('stopShareBtn').classList.remove('hidden');
+    localStream.getVideoTracks()[0].onended = () => stopScreenShare();
+  } catch(e) {
+    log('customer', 'Error: ' + e.message, 'err');
+  }
+}
+
+function stopScreenShare() {
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  log('customer', 'Screen sharing stopped', 'info');
+  setStatus('customer', 'Sharing stopped', '');
+  document.getElementById('startShareBtn').classList.remove('hidden');
+  document.getElementById('stopShareBtn').classList.add('hidden');
+}
+
+function agentDisconnect() {
+  if (pc) { pc.close(); pc = null; }
+  wsSend({ type: 'leave', code: sessionCode });
+  setStatus('agent', 'Disconnected', 'red');
+  log('agent', 'Disconnected', 'err');
+  document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('videoPlaceholder').classList.remove('hidden');
+}
+
+// ─── Utils ───────────────────────────────────────────────────────────────────
+function log(side, msg, type='') {
+  const el = document.getElementById(side + 'Log');
+  if (!el) return;
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = new Date().toLocaleTimeString() + ' › ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setStatus(side, msg, dotClass) {
+  const dot = document.getElementById(side + 'Dot');
+  const txt = document.getElementById(side + 'Status');
+  if (txt) txt.textContent = msg;
+  if (dot) { dot.className = 'status-dot'; if (dotClass) dot.classList.add(dotClass); }
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(sessionCode).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+function resetApp() {
+  if (pc) { pc.close(); pc = null; }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (ws) { ws.close(); ws = null; }
+  myRole = ''; sessionCode = '';
+  document.getElementById('customerSection').classList.add('hidden');
+  document.getElementById('agentSection').classList.add('hidden');
+  document.getElementById('agentViewCard').classList.add('hidden');
+  document.getElementById('roleSection').classList.remove('hidden');
+  document.getElementById('startShareBtn').classList.remove('hidden');
+  document.getElementById('startShareBtn').disabled = true;
+  document.getElementById('stopShareBtn').classList.add('hidden');
+  document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('videoPlaceholder').classList.remove('hidden');
+  document.getElementById('customerLog').innerHTML = '';
+  document.getElementById('agentLog').innerHTML = '';
+  document.getElementById('agentCodeInput').value = '';
+  setConnStatus('', 'Not connected');
+}
+</script>
+</body>
+</html>
